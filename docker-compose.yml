@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3005:3000"
+    environment:
+      - DATABASE_URL=postgresql://drive:drivepass@db:5432/drive?schema=public
+      - S3_ENDPOINT=http://s3:9000
+      - S3_PUBLIC_ENDPOINT=http://localhost:9000
+      - S3_REGION=us-east-1
+      - S3_ACCESS_KEY=admin
+      - S3_SECRET_KEY=admin123
+      - S3_BUCKET_NAME=drive-files
+      - ORIGIN=http://localhost:3005
+    depends_on:
+      - db
+      - s3
+
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: drive
+      POSTGRES_PASSWORD: drivepass
+      POSTGRES_DB: drive
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  s3:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin123
+      MINIO_API_CORS_ALLOW_ORIGIN: "*"
+    command: server /data --console-address ":9001"
+    volumes:
+      - s3data:/data
+
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - s3
+    entrypoint: >
+      /bin/sh -c "
+      echo '<CORSConfiguration><CORSRule><AllowedOrigin>*</AllowedOrigin><AllowedMethod>GET</AllowedMethod><AllowedMethod>PUT</AllowedMethod><AllowedMethod>POST</AllowedMethod><AllowedMethod>DELETE</AllowedMethod><AllowedHeader>*</AllowedHeader></CORSRule></CORSConfiguration>' > /tmp/cors.xml;
+      /usr/bin/mc alias set myminio http://s3:9000 admin admin123;
+      /usr/bin/mc mb myminio/drive-files || true;
+      /usr/bin/mc anonymous set public myminio/drive-files;
+      /usr/bin/mc cors set myminio/drive-files /tmp/cors.xml;
+      exit 0;
+      "
+
+volumes:
+  pgdata:
+  s3data:

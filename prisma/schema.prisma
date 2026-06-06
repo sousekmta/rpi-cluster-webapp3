@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String    @id
+  email    String    @unique
+  password String
+  sessions Session[]
+  files    File[]
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+
+  user      User     @relation(references: [id], fields: [userId], onDelete: Cascade)
+}
+
+model File {
+  id        String   @id @default(uuid())
+  name      String
+  type      String   // mime type
+  size      Int
+  s3Key     String
+  createdAt DateTime @default(now())
+  
+  userId    String
+  user      User     @relation(references: [id], fields: [userId], onDelete: Cascade)
+}
