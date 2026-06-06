@@ -2,6 +2,8 @@
 
 A cloud file storage web application inspired by services like Google Drive. Built with SvelteKit, PostgreSQL, and MinIO (S3-compatible object storage).
 
+![](assets/screenshot.png)
+
 ## Features
 
 - User registration and authentication (via Lucia v3)
